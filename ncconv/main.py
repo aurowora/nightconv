@@ -81,9 +81,9 @@ if __name__ == '__main__':
     db = MongoClient(MONGO_URI)[MONGO_DB]
 
     q = Queue()
-    ffthread = Thread(target=fftask, args=(q, db), name='orchestrator-thread').start()
+    ffthread = Thread(target=fftask, args=(q, db), name='fftask-0').start()
 
-    reaper_thread = Thread(target=reaper_task, args=(q, db), name='reaper-thread').start()
+    reaper_thread = Thread(target=reaper_task, args=(q, db), name='reaper-task').start()
 
     run('ncconv.main:app', host=BIND_HTTP_IP, port=BIND_HTTP_PORT, log_level='info', workers=HTTP_WORKERS)
     

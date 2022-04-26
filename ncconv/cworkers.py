@@ -25,7 +25,7 @@ def fftask(q: Queue, db):
     '''
     wq = Queue()
 
-    my_threads = [Thread(target=_ffworker, args=(wq, db)) for i in range(FFMPEG_WORKERS)]
+    my_threads = [Thread(target=_ffworker, args=(wq, db), name=f'fftask-{i+1}') for i in range(FFMPEG_WORKERS)]
 
     for t in my_threads:
          t.start()

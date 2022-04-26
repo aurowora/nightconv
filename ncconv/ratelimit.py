@@ -43,8 +43,12 @@ def ratelimit(key: str, limit: int, unit_time: timedelta) -> Callable:
                 new_accesses.append(access)
         
         if limit <= len(new_accesses):
-            response.headers.append('Retry-After', f'{int(math.ceil((ratedata["bucket_expires"] - now).total_seconds()))}')
-            raise HTTPException(status_code=429, detail=f'You are being ratelimited. Check the Retry-After header.')
+            # ditto
+            exp = ratedata['bucket_expires'].replace(tzinfo=timezone.utc)
+
+            raise HTTPException(status_code=429, detail=f'You are being ratelimited. Check the Retry-After header.', headers={'Retry-After': f'{int(math.ceil((exp - now).total_seconds()))}'})
+
+        new_accesses.append(now)
 
         await request.app.state.db.ratelimits.update_one({'ip': request.client.host, 'key': key}, {'$set': {'accesses': new_accesses, 'bucket_expires': now + unit_time}})
 
