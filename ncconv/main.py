@@ -14,6 +14,7 @@ from uvicorn import run
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorGridFSBucket
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 from sentry_sdk import init as sentry_init
+from pymongo import MongoClient
 
 from ncconv.config import FFMPEG_EXEC, FFPROBE_EXEC, MONGO_URI, BIND_HTTP_PORT, BIND_HTTP_IP, HOSTS, TRUSTED_PROXIES, HTTP_WORKERS, MONGO_DB, CORS_HOSTS, VERSION, SENTRY_DSN
 from ncconv.cworkers import fftask
@@ -28,7 +29,7 @@ app = FastAPI(docs_url = None, redoc_url = None)
 app.add_middleware(GZipMiddleware)
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=HOSTS)
 app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=TRUSTED_PROXIES) # This is important so that our rate limiting hits actual client IP addresses
-app.add_middleware(CORSMiddleware, allow_origins=CORS_HOSTS, allow_methods=['GET', 'POST'], allow_headers=['Content-Length'], max_age=3600)
+app.add_middleware(CORSMiddleware, allow_origins=CORS_HOSTS, allow_methods=['GET', 'POST'], allow_headers=['Content-Length'], max_age=3600, expose_headers=['Retry-After'])
 
 # sentry support
 if SENTRY_DSN:
@@ -62,11 +63,12 @@ async def initialize():
 
     # This will destroy the file (and link) but not free the storage!
     # The reaper will clean up orphaned chunks later
-    app.state.db.music.files.create_index("metadata.expire_time", expireAfterSeconds=0)
-    app.state.db.queue.create_index('expire_time', expireAfterSeconds=0)
+    await app.state.db.music.files.create_index([("metadata.expire_time", 1)], expireAfterSeconds=0)
+    await app.state.db.queue.create_index([('expire_time', 1)], expireAfterSeconds=0)
 
-    # Speaking of...
-    get_running_loop().create_task(reaper_task(app))
+    # Rate limits
+    await app.state.db.ratelimits.create_index([('bucket_expires', 1)], expireAfterSeconds=0)
+    await app.state.db.ratelimits.create_index([('ip', 1), ('key', 1)], unique=True)
 
 if __name__ == '__main__':
     # check that ffmpeg is present
@@ -75,10 +77,17 @@ if __name__ == '__main__':
         sys.exit(1)
     
     # Create threads for ffmpeg
+    # sync db handle
+    db = MongoClient(MONGO_URI)[MONGO_DB]
+
     q = Queue()
-    ffthread = Thread(target=fftask, args=(q,), name='orchestrator-thread', daemon=True)
-    ffthread.start()
+    ffthread = Thread(target=fftask, args=(q, db), name='orchestrator-thread').start()
+
+    reaper_thread = Thread(target=reaper_task, args=(q, db), name='reaper-thread').start()
 
     run('ncconv.main:app', host=BIND_HTTP_IP, port=BIND_HTTP_PORT, log_level='info', workers=HTTP_WORKERS)
     
-    q.put(1)  # Tell this thread to terminate
+    for x in range(2):
+        q.put(1)  # Tell our threads to terminate
+    
+    print('Waiting for all threads to terminate.')

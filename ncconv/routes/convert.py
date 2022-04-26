@@ -1,13 +1,14 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Form, HTTPException, UploadFile, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile, Request
 from fastapi.responses import ORJSONResponse
 from pydantic import BaseModel, confloat, constr
 from bson import ObjectId
 from bson.errors import InvalidId
 
 from ncconv.config import DEFAULT_TEMPO, DEFAULT_PITCH
+from ncconv.ratelimit import ratelimit
 
 convert_router = APIRouter(prefix='/convert', default_response_class=ORJSONResponse)
 
@@ -16,7 +17,7 @@ class EnqueueResponse(BaseModel):
     task_id: str
 
 
-@convert_router.post('/', response_model=EnqueueResponse, status_code=202)
+@convert_router.post('/', response_model=EnqueueResponse, status_code=202, dependencies=[Depends(ratelimit('do_conversion', 5, timedelta(minutes=5)))])
 async def convert_audio_file(request: Request, audio_file: UploadFile, 
                             output_format: constr(regex=r'mp3|opus') = Form(...),
                             scale_pitch: confloat(ge=0, le=10) = Form(DEFAULT_PITCH),
@@ -60,7 +61,7 @@ class CheckResponse(BaseModel):
     file_id: Optional[str]  # if completed
 
 
-@convert_router.get('/check', response_model=CheckResponse, response_model_exclude_none=True, response_model_exclude_unset=True)
+@convert_router.get('/check', response_model=CheckResponse, response_model_exclude_none=True, response_model_exclude_unset=True, dependencies=[Depends(ratelimit('check_status', 5, timedelta(seconds=5)))])
 async def check(request: Request, task_id: str):
     '''
     Retrieve information about the enqueued task.
@@ -76,10 +77,12 @@ async def check(request: Request, task_id: str):
     except InvalidId as e:
         raise HTTPException(status_code=400, detail='Bad object ID') from e
 
+
     doc = await request.app.state.db.queue.find_one({'_id': task_id})
     if not doc:
         raise HTTPException(status_code=404, detail='No such task was found.')
     
+
     if doc['state'] == 2:
         await request.app.state.db.queue.delete_one({'_id': task_id})
         return CheckResponse(complete = True, file_id = str(doc['completed_file']))

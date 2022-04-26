@@ -14,7 +14,7 @@ import sentry_sdk
 from ncconv.config import MONGO_URI, MONGO_DB, FFMPEG_WORKERS, SENTRY_DSN
 from ncconv.ffconv import convert_audio
 
-def fftask(q: Queue):
+def fftask(q: Queue, db):
     '''
     This thread spawns FFMPEG_WORKER threads to handle conversion jobs.
     Once threads are spawned, it waits for incoming requests and dispatches them to workers as needed.
@@ -23,11 +23,9 @@ def fftask(q: Queue):
 
     :param q: Termination signal queue
     '''
-
-    db = MongoClient(MONGO_URI)[MONGO_DB]
     wq = Queue()
 
-    my_threads = [Thread(target=_ffworker, args=(wq, db), daemon=True) for i in range(FFMPEG_WORKERS)]
+    my_threads = [Thread(target=_ffworker, args=(wq, db)) for i in range(FFMPEG_WORKERS)]
 
     for t in my_threads:
          t.start()

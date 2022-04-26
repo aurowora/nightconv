@@ -1,28 +1,30 @@
-from asyncio import sleep
-from random import randint
+import time
+
+from more_itertools import chunked
+from queue import Empty, Queue
 from contextlib import suppress
 
-from fastapi import FastAPI
-from more_itertools import chunked
 import sentry_sdk
 
 from ncconv.config import SENTRY_DSN
 
 
-async def reaper_task(app: FastAPI):
+def reaper_task(q: Queue, db):
     '''
-    Periodically frees orphaned gridfs chunks when the parent is killed by the database
-
-    Does not return. Use crate_task() with this.
+    Thread periodically frees orphaned gridfs chunks when the parent is killed by the database
     '''
 
     while True:
         try:
-            # add a bit of jitter because there's going to be as many reapers as we have cores by default
-            await sleep(1800 + randint(0, 3600))
+            with suppress(Empty):
+                poison = q.get_nowait()
+                if poison:
+                    break
+
+            time.sleep(30)
 
             # Fetch a cursor of documents to delete
-            cur = await app.state.db.music.chunks.aggregate([
+            cur = db.music.chunks.aggregate([
                 {
                     '$lookup': {
                         'from': 'music.files',
@@ -43,11 +45,11 @@ async def reaper_task(app: FastAPI):
                 }
             ])
 
-            # each() doesn't seem to be supported with asyncio?
-            async for docs in chunked(cur, 50):
-                await app.state.db.music.chunks.delete_many({
-                    '$or': docs
+            for docs in chunked(cur, 50):
+                db.music.chunks.delete_many({
+                        '$or': [{'_id': doc['_id']} for doc in docs]
                 })
+
         except Exception as e:
             if SENTRY_DSN:
                 sentry_sdk.capture_exception(e)
