@@ -15,7 +15,7 @@ def ratelimit(key: str, limit: int, unit_time: timedelta) -> Callable:
     :param limit: Limit per unit time as an int
     :param unit_time: Timedelta to apply this rate limit over
     '''
-    async def do_limit(request: Request, response: Response):
+    async def do_limit(request: Request):
         ratedata = await request.app.state.db.ratelimits.find_one({'ip': request.client.host, 'key': key})
 
         now = datetime.now(timezone.utc)

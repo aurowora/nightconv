@@ -1,6 +1,5 @@
 #! /usr/bin/env python3
 
-from asyncio import get_running_loop
 from threading import Thread
 from queue import Queue
 import shutil, sys
@@ -10,6 +9,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from uvicorn import run
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorGridFSBucket
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
@@ -23,13 +23,27 @@ from ncconv.routes.media import media_router
 from ncconv.routes.convert import convert_router
 
 
-app = FastAPI(docs_url = None, redoc_url = None)
+api = FastAPI(docs_url = None, redoc_url = None)
 
 # Add the desired middleware
-app.add_middleware(GZipMiddleware)
-app.add_middleware(TrustedHostMiddleware, allowed_hosts=HOSTS)
-app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=TRUSTED_PROXIES) # This is important so that our rate limiting hits actual client IP addresses
-app.add_middleware(CORSMiddleware, allow_origins=CORS_HOSTS, allow_methods=['GET', 'POST'], allow_headers=['Content-Length'], max_age=3600, expose_headers=['Retry-After'])
+api.add_middleware(TrustedHostMiddleware, allowed_hosts=HOSTS)
+api.add_middleware(ProxyHeadersMiddleware, trusted_hosts=TRUSTED_PROXIES) # This is important so that our rate limiting hits actual client IP addresses
+api.add_middleware(CORSMiddleware, allow_origins=CORS_HOSTS, allow_methods=['GET', 'POST'], allow_headers=['Content-Length'], max_age=3600, expose_headers=['Retry-After'])
+
+
+# Add subrouters
+api.include_router(media_router)
+api.include_router(convert_router)
+
+
+# Serve the web app
+sf = GZipMiddleware(StaticFiles(directory='public', html=True))
+
+# Configure a wrapper FastAPI app
+
+app = FastAPI(docs_url = None, redoc_url = None)
+app.mount('/api', api)
+app.mount('/', sf, name='static')
 
 # sentry support
 if SENTRY_DSN:
@@ -48,27 +62,24 @@ if SENTRY_DSN:
     app.add_middleware(SentryAsgiMiddleware)
 
 
-# Add subrouters
-app.include_router(media_router)
-app.include_router(convert_router)
-
-
+# Events do not get called for mounted apps
 @app.on_event('startup')
 async def initialize():
     # Connect to the database
-    app.state.db = AsyncIOMotorClient(MONGO_URI)[MONGO_DB]
-    app.state.file_store = AsyncIOMotorGridFSBucket(app.state.db, bucket_name="music")
+    api.state.db = AsyncIOMotorClient(MONGO_URI)[MONGO_DB]
+    api.state.file_store = AsyncIOMotorGridFSBucket(api.state.db, bucket_name="music")
 
     # Setup indexes
 
     # This will destroy the file (and link) but not free the storage!
     # The reaper will clean up orphaned chunks later
-    await app.state.db.music.files.create_index([("metadata.expire_time", 1)], expireAfterSeconds=0)
-    await app.state.db.queue.create_index([('expire_time', 1)], expireAfterSeconds=0)
+    await api.state.db.music.files.create_index([("metadata.expire_time", 1)], expireAfterSeconds=0)
+    await api.state.db.queue.create_index([('expire_time', 1)], expireAfterSeconds=0)
 
     # Rate limits
-    await app.state.db.ratelimits.create_index([('bucket_expires', 1)], expireAfterSeconds=0)
-    await app.state.db.ratelimits.create_index([('ip', 1), ('key', 1)], unique=True)
+    await api.state.db.ratelimits.create_index([('bucket_expires', 1)], expireAfterSeconds=0)
+    await api.state.db.ratelimits.create_index([('ip', 1), ('key', 1)], unique=True)
+
 
 if __name__ == '__main__':
     # check that ffmpeg is present
