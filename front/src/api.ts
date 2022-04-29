@@ -70,7 +70,7 @@ async function wait_for_completion(task_id: string, status_cb: StatusCallback): 
         }
 
         // This is sleep
-        await new Promise(r => setTimeout(r, 2500));
+        await new Promise(r => setTimeout(r, 1250));
     }
 }
 

@@ -80,7 +80,7 @@ async def check(request: Request, task_id: str):
         raise HTTPException(status_code=400, detail='Bad object ID') from e
 
 
-    doc = await request.app.state.db.queue.find_and_update_one({'_id': task_id}, {'$set': {'last_checked': datetime.now(timezone.utc)}})
+    doc = await request.app.state.db.queue.find_one_and_update({'_id': task_id}, {'$set': {'last_checked': datetime.now(timezone.utc)}})
     if not doc:
         raise HTTPException(status_code=404, detail='No such task was found.')
     
