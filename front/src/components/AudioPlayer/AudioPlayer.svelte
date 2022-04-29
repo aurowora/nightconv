@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { get_audio_info } from "../api"
+    import { get_audio_info } from "../../api"
     import PlayButton from './PlayButton.svelte';
     import DownloadButton from './DownloadButton.svelte';
     import DurationSlider from './DurationSlider.svelte';

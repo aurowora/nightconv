@@ -1,7 +1,7 @@
 <script lang="ts">
-    import { DEFAULT_PITCH_SCALER, DEFAULT_TEMPO_SCALER, MAX_FILE_SIZE, ALLOWED_FORMATS } from './globals';
+    import { DEFAULT_PITCH_SCALER, DEFAULT_TEMPO_SCALER, MAX_FILE_SIZE, ALLOWED_FORMATS } from '../globals';
     import filesize from 'filesize';
-    import { convert_audio } from './api';
+    import { convert_audio } from '../api';
     import AudioPlayer from './AudioPlayer/AudioPlayer.svelte';
 
     let converting = false;

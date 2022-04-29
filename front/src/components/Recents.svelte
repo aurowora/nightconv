@@ -1,5 +1,5 @@
 <script lang="ts">
-import { get_recent_files } from "./api";
+import { get_recent_files } from "../api";
 import AudioPlayer from "./AudioPlayer/AudioPlayer.svelte";
 
 </script>
