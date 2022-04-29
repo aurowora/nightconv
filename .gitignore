@@ -2,7 +2,6 @@
 __pycache__
 .env
 
-public/
 front/node_modules/
 front/public/build/
 front/stats.json
