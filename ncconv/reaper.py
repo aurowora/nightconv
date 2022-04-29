@@ -17,11 +17,9 @@ def reaper_task(q: Queue, db):
     while True:
         try:
             with suppress(Empty):
-                poison = q.get_nowait()
+                poison = q.get(block=True, timeout=30)
                 if poison:
                     break
-
-            time.sleep(30)
 
             # Fetch a cursor of documents to delete
             cur = db.music.chunks.aggregate([

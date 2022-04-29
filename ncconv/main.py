@@ -5,7 +5,6 @@ from queue import Queue
 import shutil, sys
 
 from fastapi import FastAPI, HTTPException
-from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,6 +14,7 @@ from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorGridFSBucket
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 from sentry_sdk import init as sentry_init
 from pymongo import MongoClient
+from brotli_asgi import BrotliMiddleware
 
 from ncconv.config import FFMPEG_EXEC, FFPROBE_EXEC, MONGO_URI, BIND_HTTP_PORT, BIND_HTTP_IP, HOSTS, TRUSTED_PROXIES, HTTP_WORKERS, MONGO_DB, CORS_HOSTS, VERSION, SENTRY_DSN
 from ncconv.cworkers import fftask
@@ -29,7 +29,7 @@ api = FastAPI(docs_url = None, redoc_url = None)
 api.add_middleware(TrustedHostMiddleware, allowed_hosts=HOSTS)
 api.add_middleware(ProxyHeadersMiddleware, trusted_hosts=TRUSTED_PROXIES) # This is important so that our rate limiting hits actual client IP addresses
 api.add_middleware(CORSMiddleware, allow_origins=CORS_HOSTS, allow_methods=['GET', 'POST'], allow_headers=['Content-Length'], max_age=3600, expose_headers=['Retry-After'])
-
+api.add_middleware(BrotliMiddleware, gzip_fallback=True, minimum_size=400)
 
 # Add subrouters
 api.include_router(media_router)
@@ -37,7 +37,7 @@ api.include_router(convert_router)
 
 
 # Serve the web app
-sf = GZipMiddleware(StaticFiles(directory='public', html=True))
+sf = BrotliMiddleware(StaticFiles(directory='public', html=True), gzip_fallback=True)
 
 # Configure a wrapper FastAPI app
 

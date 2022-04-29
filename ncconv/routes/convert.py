@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile, Request
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, Request
 from fastapi.responses import ORJSONResponse
 from pydantic import BaseModel, confloat, constr
 from bson import ObjectId
@@ -18,14 +18,14 @@ class EnqueueResponse(BaseModel):
 
 
 @convert_router.post('/', response_model=EnqueueResponse, status_code=202, dependencies=[Depends(ratelimit('do_conversion', 5, timedelta(minutes=5)))])
-async def convert_audio_file(request: Request, audio_file: UploadFile, 
-                            output_format: constr(regex=r'mp3|opus') = Form(...),
-                            scale_pitch: confloat(ge=0, le=10) = Form(DEFAULT_PITCH),
-                            scale_tempo: confloat(ge=0, le=10) = Form(DEFAULT_TEMPO)) -> EnqueueResponse:
+async def convert_audio_file(request: Request, audio_file: UploadFile = File(...), 
+                            output_format: constr(regex='ogg|m4a') = Form(...),
+                            scale_pitch: confloat(gt=0, le=10) = Form(DEFAULT_PITCH),
+                            scale_tempo: confloat(gt=0, le=10) = Form(DEFAULT_TEMPO)) -> EnqueueResponse:
     '''
     enqueues the audio file to the user's specification and returns a key that be used with /check
 
-    WARNING: THERE IS NO SIZE LIMIT HERE, ENFORCE IN NGINX 
+    Warning: Length is not checked. Must enforce in NGINX
 
     :param audio_file: The audio file to process
     :param output_format: The desired output format
@@ -95,5 +95,5 @@ async def check(request: Request, task_id: str):
     
     # _id encodes a 4 byte timestamp, so it can be used to roughly guess how many documents are ahead of us
     # anything with an _id less the doc['_id'] would have be submitted before us
-    ahead = (await request.app.state.db.queue.count_documents({'_id': {'$lt': doc['_id']}}))
+    ahead = (await request.app.state.db.queue.count_documents({'_id': {'$lt': doc['_id']}, 'state': {'$lte': 1}}))
     return CheckResponse(complete = False, position = ahead + 1)

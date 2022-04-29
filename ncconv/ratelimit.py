@@ -46,7 +46,8 @@ def ratelimit(key: str, limit: int, unit_time: timedelta) -> Callable:
             # ditto
             exp = ratedata['bucket_expires'].replace(tzinfo=timezone.utc)
 
-            raise HTTPException(status_code=429, detail=f'You are being ratelimited. Check the Retry-After header.', headers={'Retry-After': f'{int(math.ceil((exp - now).total_seconds()))}'})
+            secs = f'{int(math.ceil((exp - now).total_seconds()))}'
+            raise HTTPException(status_code=429, detail=f'You are being ratelimited. You can make requests again in {secs} seconds.', headers={'Retry-After': secs})
 
         new_accesses.append(now)
 

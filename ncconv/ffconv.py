@@ -2,7 +2,8 @@
 
 import subprocess
 from typing import Tuple
-from asyncio import get_running_loop, wait_for
+from tempfile import TemporaryDirectory
+import os
 
 from fastapi import HTTPException
 from orjson import loads as json_loads
@@ -73,18 +74,18 @@ def _construct_filters(tempo_scaler: float, orig_sample_rate: int, new_sample_ra
 # converts the output_format string to the ffmpeg params
 # input -> (format, codec)
 __ffmpeg_formats = {
-    'mp3': ('mp3', 'mp3'),
-    'opus': ('opus', 'libopus')
+    'm4a': ('mp4', 'aac'),
+    'ogg': ('ogg', 'libvorbis')
 }    
 
-def convert_audio(input_stream: bytes, output_format: str = 'mp3', tempo_scaler: float = DEFAULT_TEMPO, pitch_scaler: float = DEFAULT_PITCH) -> bytes:
+def convert_audio(input_stream: bytes, output_format: str = 'm4a', tempo_scaler: float = DEFAULT_TEMPO, pitch_scaler: float = DEFAULT_PITCH) -> bytes:
     '''
     Perform the conversion and returns the result.
 
     This routine blocks and shouldn't be called on the main thread.
     
     :param input_stream: Audio stream to convert
-    :param output_format: One of mp3 or opus
+    :param output_format: One of m4a or ogg
     :param tempo_scaler: Percent by which to change the tempo as a fraction of 1
     :param pitch_scaler: Percent by which to change the pitch as a fraction of 1
     '''
@@ -97,10 +98,15 @@ def convert_audio(input_stream: bytes, output_format: str = 'mp3', tempo_scaler:
     except KeyError:
         raise HTTPException(status_code=400, detail='Unsupported output format')
 
-    # Perform the conversion! Wow!
-    proc = subprocess.run((FFMPEG_EXEC, '-i', 'pipe:', '-f', input_format, '-c:a', output_codec, '-f', output_format, '-af', filters, 'pipe:'), capture_output=True, input=input_stream)
+    # We can't just read stdout because the mp4 muxer doesn't support non-seekable outputs
+    with TemporaryDirectory() as td:
+        tfp = os.path.join(td, 'output')
+        # Perform the conversion! Wow!
+        proc = subprocess.run((FFMPEG_EXEC, '-i', 'pipe:', '-f', input_format, '-c:a', output_codec, '-vn', '-f', output_format, '-af', filters, tfp), input=input_stream, capture_output=True)
 
-    if proc.returncode != 0:
-        raise HTTPException(status_code=500, detail='Audio conversion failed')
+        if proc.returncode != 0:
+            print(proc.stderr)
+            raise HTTPException(status_code=500, detail='Audio conversion failed')
 
-    return proc.stdout
+        with open(tfp, 'rb') as fp:
+            return fp.read()

@@ -5,3 +5,4 @@ __pycache__
 ./public/
 front/node_modules/
 front/public/build/
+front/stats.json

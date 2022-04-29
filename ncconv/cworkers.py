@@ -11,7 +11,7 @@ from pymongo import MongoClient
 import gridfs
 import sentry_sdk
 
-from ncconv.config import MONGO_URI, MONGO_DB, FFMPEG_WORKERS, SENTRY_DSN
+from ncconv.config import FFMPEG_WORKERS, SENTRY_DSN
 from ncconv.ffconv import convert_audio
 
 def fftask(q: Queue, db):
@@ -33,7 +33,7 @@ def fftask(q: Queue, db):
     while True:
         try:
             with suppress(Empty):
-                poison = q.get_nowait()
+                poison = q.get(block=True, timeout=1)
                 if poison:
                     break
             
@@ -46,8 +46,6 @@ def fftask(q: Queue, db):
 
             if doc:
                 wq.put(doc, block=True)
-            else:
-                sleep(5)
         except Exception as e:
             if SENTRY_DSN:
                 sentry_sdk.capture_exception(e)
@@ -82,12 +80,12 @@ def _ffworker(q: Queue, db):
                 
                 # rename and escape the filename
                 fn = re.sub(r'(?u)[^-\w.]', '', f.filename.strip().replace(' ', '_'))
-                fn = path.splitext(fn)[0] + '.night' + ('.mp3' if output_format == 'mp3' else '.opus')
+                fn = path.splitext(fn)[0] + '.night' + ('.m4a' if output_format == 'm4a' else '.ogg')
 
                 # Perform the conversion and upload it
                 buf = convert_audio(f.read(), output_format, scale_tempo, scale_pitch)
                 inserted_id = g.put(buf, metadata = {
-                    'content_type': 'audio/mpeg' if output_format == 'mp3' else 'audio/ogg',
+                    'content_type': 'audio/mp4' if output_format == 'm4a' else 'audio/ogg',
                     'expire_time': datetime.now(timezone.utc) + timedelta(days=1),
                     'uploaded_by': str(doc['enqueued_by'])
                 }, filename=fn)
