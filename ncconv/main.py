@@ -76,6 +76,10 @@ async def initialize():
     await api.state.db.music.files.create_index([("metadata.expire_time", 1)], expireAfterSeconds=0)
     await api.state.db.queue.create_index([('expire_time', 1)], expireAfterSeconds=0)
 
+    # If the client does not check the status of the queued item within 30 seconds
+    # we assume they've lost interest and delete the item (navigated away, etc)
+    await api.state.db.queue.create_index([('last_checked', -1)], expireAfterSeconds=30)
+
     # Rate limits
     await api.state.db.ratelimits.create_index([('bucket_expires', 1)], expireAfterSeconds=0)
     await api.state.db.ratelimits.create_index([('ip', 1), ('key', 1)], unique=True)

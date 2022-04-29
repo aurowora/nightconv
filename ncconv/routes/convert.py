@@ -33,7 +33,8 @@ async def convert_audio_file(request: Request, audio_file: UploadFile = File(...
     :param scale_tempo: tempo scale factor
     '''
 
-    deadline = datetime.now(timezone.utc) + timedelta(days=1)
+    now = datetime.now(timezone.utc)
+    deadline = now + timedelta(days=1)
 
     async with request.app.state.file_store.open_upload_stream(audio_file.filename, metadata = {
         'pending': True,
@@ -48,6 +49,7 @@ async def convert_audio_file(request: Request, audio_file: UploadFile = File(...
         'scale_tempo': scale_tempo,
         'output_format': output_format,
         'expire_time': deadline,
+        'last_checked': now,
         'enqueued_by': str(request.client.host),
         'state': 0
     })
@@ -78,7 +80,7 @@ async def check(request: Request, task_id: str):
         raise HTTPException(status_code=400, detail='Bad object ID') from e
 
 
-    doc = await request.app.state.db.queue.find_one({'_id': task_id})
+    doc = await request.app.state.db.queue.find_and_update_one({'_id': task_id}, {'$set': {'last_checked': datetime.now(timezone.utc)}})
     if not doc:
         raise HTTPException(status_code=404, detail='No such task was found.')
     
