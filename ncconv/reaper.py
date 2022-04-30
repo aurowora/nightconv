@@ -6,7 +6,7 @@
 #
 # See LICENSE.txt for more information.
 #
-# reaper.py - Contains logic for the reaper thrad, which is responsible for
+# reaper.py - Contains logic for the reaper thread, which is responsible for
 # freeing unused MongoDB objects in the background.
 
 
