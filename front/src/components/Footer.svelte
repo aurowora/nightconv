@@ -13,7 +13,7 @@ Footer.svelte - Displays copyright notice at the bottom of the page.
 <small class="footer">
     Nightconv &copy; 2022 Aurora. This website is licensed under the terms of
     the GNU AGPL version 3 ONLY. 
-    See the <a href="https://github.com/aurowora/nightconv/blob/main/LICENSE.txt">LICENSE</a>
+    See the <a href="https://github.com/aurowora/nightconv/blob/main/LICENSE.txt" target="_blank">LICENSE</a>
     for more information.
 </small>
 
