@@ -1,8 +1,19 @@
+# Copyright (C) 2022  Aurora McGinnis
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation using version 3 of the License ONLY.
+#
+# See LICENSE.txt for more information.
+#
+# ratelimit.py - Contains ratelimiting logic
+
+
 from datetime import datetime, timedelta, timezone
 import math
 from typing import Callable
 
-from fastapi import HTTPException, Request, Response
+from fastapi import HTTPException, Request
 
 
 def ratelimit(key: str, limit: int, unit_time: timedelta) -> Callable:

@@ -1,3 +1,15 @@
+<!--
+Copyright (C) 2022  Aurora McGinnis
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published
+by the Free Software Foundation using version 3 of the License ONLY.
+
+See LICENSE.txt for more information.
+
+Convert.svelte - Form for converting files and displaying the result.
+-->
+
 <script lang="ts">
     import { DEFAULT_PITCH_SCALER, DEFAULT_TEMPO_SCALER, MAX_FILE_SIZE, ALLOWED_FORMATS } from '../globals';
     import { convert_audio } from '../api';

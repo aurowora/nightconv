@@ -1,4 +1,14 @@
-import time
+# Copyright (C) 2022  Aurora McGinnis
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation using version 3 of the License ONLY.
+#
+# See LICENSE.txt for more information.
+#
+# reaper.py - Contains logic for the reaper thrad, which is responsible for
+# freeing unused MongoDB objects in the background.
+
 
 from more_itertools import chunked
 from queue import Empty, Queue

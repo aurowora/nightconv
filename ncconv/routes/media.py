@@ -1,4 +1,14 @@
-# Route handler for downloading content
+# Copyright (C) 2022  Aurora McGinnis
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation using version 3 of the License ONLY.
+#
+# See LICENSE.txt for more information.
+#
+# media.py - FastAPI routes related to reading media and related metadata
+# from the database
+
 
 from datetime import datetime
 from typing import List
@@ -12,34 +22,39 @@ from gridfs.errors import NoFile
 
 media_router = APIRouter(prefix='/media')
 
+
 @media_router.get('/file/{file_id}/{filename}')
 async def get_file(ctx: Request, file_id: str, filename: str) -> StreamingResponse:
     '''
     Retrieves a file from GridFS with the specified file_id.
 
     :param file_id: ObjectID represented as a string
-    :param filename: Necessary to stop the browser from giving the file the wrong extension
+    :param filename: Potentially necessary to play and download
+    audio correctly with some browsers.
     '''
 
     try:
         file_id = ObjectId(file_id)
     except InvalidId as e:
-        raise HTTPException(status_code=400, detail='Audio file ID is not valid') from e
-    
+        raise HTTPException(
+            status_code=400, detail='Audio file ID is not valid') from e
+
     try:
         grid_out = await ctx.app.state.file_store.open_download_stream(file_id)
     except NoFile as e:
-        raise HTTPException(status_code=404, detail='Audio file expired or never existed.') from e
+        raise HTTPException(
+            status_code=404, detail='Audio file expired or never existed.') from e
 
     if 'pending' in grid_out.metadata:
-        raise HTTPException(status_code=404, detail='Audio file expired or never existed.')
+        raise HTTPException(
+            status_code=404, detail='Audio file expired or never existed.')
 
     content_type = grid_out.metadata['content_type']
 
     async def reader():
         while grid_out.tell() < grid_out.length:
             yield await grid_out.readchunk()
-    
+
     return StreamingResponse(reader(), media_type=content_type, headers={
         'Content-Disposition': f'attachment; filename="{grid_out.filename}"',
         'Cache-Control': 'public, max-age=31536000, immutable, no-transform',
@@ -64,13 +79,15 @@ async def get_file(ctx: Request, file_id: str) -> FileDescription:
     try:
         file_id = ObjectId(file_id)
     except InvalidId as e:
-        raise HTTPException(status_code=400, detail='Audio file ID is not valid') from e
+        raise HTTPException(
+            status_code=400, detail='Audio file ID is not valid') from e
 
     fi = await ctx.app.state.db.music.files.find_one({'_id': file_id, '$or': [{'metadata.pending': {'$exists': False}}, {'metadata.pending': False}]})
 
     if not fi:
-        raise HTTPException(status_code=404, detail='Audio file expired or never existed.')
-    
+        raise HTTPException(
+            status_code=404, detail='Audio file expired or never existed.')
+
     return FileDescription(filename=fi['filename'], content_type=fi['metadata']['content_type'], expire_time=fi['metadata']['expire_time'], length=fi['length'])
 
 
@@ -79,8 +96,9 @@ async def get_recents(ctx: Request) -> List[str]:
     '''
     Retrieves the 10 most recently converted files.
     '''
-    
-    cur = ctx.app.state.db.music.files.find({'$or': [{'metadata.pending': {'$exists': False}}, {'metadata.pending': False}]})
+
+    cur = ctx.app.state.db.music.files.find(
+        {'$or': [{'metadata.pending': {'$exists': False}}, {'metadata.pending': False}]})
     cur.sort(('uploadDate'), -1)
     cur.limit(10)
 

@@ -1,3 +1,15 @@
+<!--
+Copyright (C) 2022  Aurora McGinnis
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published
+by the Free Software Foundation using version 3 of the License ONLY.
+
+See LICENSE.txt for more information.
+
+App.svelte - This file is the root of the web app and is mounted into the DOM.
+-->
+
 <script lang="ts">
 	import Convert from './Convert.svelte';
 	import Recents from './Recents.svelte';

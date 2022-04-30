@@ -40,7 +40,7 @@ Inside this file, insert lines of form `KEY=VALUE`. The following configuration 
 
 - This application should be ran behind a reverse proxy rather than being directly exposed to the internet. Reverse proxies support nice things like TLS.
 - If the service is accessible from the internet, then a maximum upload size should be configured on the reverse proxy. Otherwise users could submit audio files of arbritrary size, which can easily consume large amounts of memory.
-- Audio files are stored in MongoDB using GridFS. Your database server should have sufficient storage to store these objects.
+- Audio files are stored in MongoDB using GridFS. Your database server should have sufficient storage to store these objects. A good rule of thumb is 3 - 4 MB per audio file.
 - It is safe to run multiple instances of the application against the same database.
 
 ### Installing & Running
@@ -92,7 +92,7 @@ systemctl enable --now ncconv.service
 
 Copyright (C) 2022  Aurora McGinnis
 
-This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License ONLY.
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation using version 3 of the License ONLY.
 
 This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public License for more details.
 

@@ -1,3 +1,14 @@
+# Copyright (C) 2022  Aurora McGinnis
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation using version 3 of the License ONLY.
+#
+# See LICENSE.txt for more information.
+#
+# cworkers.py - ffmpeg worker threads
+
+
 from contextlib import suppress
 from datetime import datetime, timedelta, timezone
 from os import path
@@ -14,7 +25,7 @@ import sentry_sdk
 from ncconv.config import FFMPEG_WORKERS, SENTRY_DSN
 from ncconv.ffconv import convert_audio
 
-def fftask(q: Queue, db):
+def fftask(q: Queue, db: MongoClient):
     '''
     This thread spawns FFMPEG_WORKER threads to handle conversion jobs.
     Once threads are spawned, it waits for incoming requests and dispatches them to workers as needed.
