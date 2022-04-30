@@ -43,7 +43,7 @@ def ratelimit(key: str, limit: int, unit_time: timedelta) -> Callable:
 
             await request.app.state.db.ratelimits.insert_one(ratedata)
             return
-        
+
         new_accesses = []
         for access in ratedata['accesses']:
             # Motor does not seem to restore the timezone attributes for datetime objects, so we have to do this manually
@@ -52,13 +52,14 @@ def ratelimit(key: str, limit: int, unit_time: timedelta) -> Callable:
             # append any accesses which still count against the rate limit
             if now - access < unit_time:
                 new_accesses.append(access)
-        
+
         if limit <= len(new_accesses):
             # ditto
             exp = ratedata['bucket_expires'].replace(tzinfo=timezone.utc)
 
             secs = f'{int(math.ceil((exp - now).total_seconds()))}'
-            raise HTTPException(status_code=429, detail=f'You are being ratelimited. You can make requests again in {secs} seconds.', headers={'Retry-After': secs})
+            raise HTTPException(status_code=429, detail=f'You are being ratelimited. You can make requests again in {secs} seconds.', headers={
+                                'Retry-After': secs})
 
         new_accesses.append(now)
 

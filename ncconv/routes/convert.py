@@ -21,7 +21,8 @@ from bson.errors import InvalidId
 from ncconv.config import DEFAULT_TEMPO, DEFAULT_PITCH
 from ncconv.ratelimit import ratelimit
 
-convert_router = APIRouter(prefix='/convert', default_response_class=ORJSONResponse)
+convert_router = APIRouter(
+    prefix='/convert', default_response_class=ORJSONResponse)
 
 
 class EnqueueResponse(BaseModel):
@@ -29,10 +30,12 @@ class EnqueueResponse(BaseModel):
 
 
 @convert_router.post('/', response_model=EnqueueResponse, status_code=202, dependencies=[Depends(ratelimit('do_conversion', 5, timedelta(minutes=5)))])
-async def convert_audio_file(request: Request, audio_file: UploadFile = File(...), 
-                            output_format: constr(regex='ogg|m4a') = Form(...),
-                            scale_pitch: confloat(gt=0, le=10) = Form(DEFAULT_PITCH),
-                            scale_tempo: confloat(gt=0, le=10) = Form(DEFAULT_TEMPO)) -> EnqueueResponse:
+async def convert_audio_file(request: Request, audio_file: UploadFile = File(...),
+                             output_format: constr(
+                                 regex='ogg|m4a') = Form(...),
+                             scale_pitch: confloat(
+                                 gt=0, le=10) = Form(DEFAULT_PITCH),
+                             scale_tempo: confloat(gt=0, le=10) = Form(DEFAULT_TEMPO)) -> EnqueueResponse:
     '''
     enqueues the audio file to the user's specification and returns a key that be used with /check
 
@@ -47,7 +50,7 @@ async def convert_audio_file(request: Request, audio_file: UploadFile = File(...
     now = datetime.now(timezone.utc)
     deadline = now + timedelta(days=1)
 
-    async with request.app.state.file_store.open_upload_stream(audio_file.filename, metadata = {
+    async with request.app.state.file_store.open_upload_stream(audio_file.filename, metadata={
         'pending': True,
         'expire_time': deadline
     }) as grid_in:
@@ -90,23 +93,22 @@ async def check(request: Request, task_id: str):
     except InvalidId as e:
         raise HTTPException(status_code=400, detail='Bad object ID') from e
 
-
     doc = await request.app.state.db.queue.find_one_and_update({'_id': task_id}, {'$set': {'last_checked': datetime.now(timezone.utc)}})
     if not doc:
         raise HTTPException(status_code=404, detail='No such task was found.')
-    
 
     if doc['state'] == 2:
         await request.app.state.db.queue.delete_one({'_id': task_id})
-        return CheckResponse(complete = True, file_id = str(doc['completed_file']))
+        return CheckResponse(complete=True, file_id=str(doc['completed_file']))
     elif doc['state'] == 3:
         await request.app.state.db.queue.delete_one({'_id': task_id})
-        raise HTTPException(status_code=doc['status_code'], detail=doc['detail'])
+        raise HTTPException(
+            status_code=doc['status_code'], detail=doc['detail'])
     elif doc['state'] > 3:
-        raise HTTPException(status_code=500, detail='Request is in a bad state. Try making a new one!')
+        raise HTTPException(
+            status_code=500, detail='Request is in a bad state. Try making a new one!')
 
-    
     # _id encodes a 4 byte timestamp, so it can be used to roughly guess how many documents are ahead of us
     # anything with an _id less the doc['_id'] would have be submitted before us
     ahead = (await request.app.state.db.queue.count_documents({'_id': {'$lt': doc['_id']}, 'state': {'$lte': 1}}))
-    return CheckResponse(complete = False, position = ahead + 1)
+    return CheckResponse(complete=False, position=ahead + 1)

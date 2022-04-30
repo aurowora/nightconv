@@ -25,6 +25,7 @@ import sentry_sdk
 from ncconv.config import FFMPEG_WORKERS, SENTRY_DSN
 from ncconv.ffconv import convert_audio
 
+
 def fftask(q: Queue, db: MongoClient):
     '''
     This thread spawns FFMPEG_WORKER threads to handle conversion jobs.
@@ -36,10 +37,11 @@ def fftask(q: Queue, db: MongoClient):
     '''
     wq = Queue()
 
-    my_threads = [Thread(target=_ffworker, args=(wq, db), name=f'fftask-{i+1}') for i in range(FFMPEG_WORKERS)]
+    my_threads = [Thread(target=_ffworker, args=(
+        wq, db), name=f'fftask-{i+1}') for i in range(FFMPEG_WORKERS)]
 
     for t in my_threads:
-         t.start()
+        t.start()
 
     while True:
         try:
@@ -47,7 +49,7 @@ def fftask(q: Queue, db: MongoClient):
                 poison = q.get(block=True, timeout=1)
                 if poison:
                     break
-            
+
             # this is an atomic operation with respect to the doc
             doc = db.queue.find_one_and_update(
                 {'state': 0},
@@ -83,19 +85,24 @@ def _ffworker(q: Queue, db):
     while (doc := q.get(block=True)) != 1:
         try:
             try:
-                pending_file, scale_pitch, scale_tempo, output_format = doc['pending_file'], doc['scale_pitch'], doc['scale_tempo'], doc['output_format']
+                pending_file, scale_pitch, scale_tempo, output_format = doc[
+                    'pending_file'], doc['scale_pitch'], doc['scale_tempo'], doc['output_format']
                 f = g.find_one(pending_file)
 
                 if not f:
-                    raise HTTPException(status_code=404, detail='No such pending file')
-                
+                    raise HTTPException(
+                        status_code=404, detail='No such pending file')
+
                 # rename and escape the filename
-                fn = re.sub(r'(?u)[^-\w.]', '', f.filename.strip().replace(' ', '_'))
-                fn = path.splitext(fn)[0] + '.night' + ('.m4a' if output_format == 'm4a' else '.ogg')
+                fn = re.sub(r'(?u)[^-\w.]', '',
+                            f.filename.strip().replace(' ', '_'))
+                fn = path.splitext(fn)[0] + '.night' + \
+                    ('.m4a' if output_format == 'm4a' else '.ogg')
 
                 # Perform the conversion and upload it
-                buf = convert_audio(f.read(), output_format, scale_tempo, scale_pitch)
-                inserted_id = g.put(buf, metadata = {
+                buf = convert_audio(f.read(), output_format,
+                                    scale_tempo, scale_pitch)
+                inserted_id = g.put(buf, metadata={
                     'content_type': 'audio/mp4' if output_format == 'm4a' else 'audio/ogg',
                     'expire_time': datetime.now(timezone.utc) + timedelta(days=1),
                     'uploaded_by': str(doc['enqueued_by'])
@@ -108,7 +115,7 @@ def _ffworker(q: Queue, db):
                     'completed_file': inserted_id,
                     'expire_time': doc['expire_time']
 
-                })                
+                })
             except (HTTPException, Exception) as e:
                 if isinstance(e, HTTPException):
                     status_code, detail = e.status_code, e.detail
@@ -129,5 +136,5 @@ def _ffworker(q: Queue, db):
         except Exception as e:
             if SENTRY_DSN:
                 sentry_sdk.capture_exception(e)
-            
+
             print(e)

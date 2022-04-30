@@ -27,7 +27,8 @@ def _probe_audio(input_stream: bytes) -> Tuple[str, int]:
     :param input_stream: Audio stream to guess the type of
     '''
 
-    proc = subprocess.run((FFPROBE_EXEC, '-v', 'quiet', '-print_format', 'json', '-show_format', '-show_streams', '-'), capture_output=True, input=input_stream)
+    proc = subprocess.run((FFPROBE_EXEC, '-v', 'quiet', '-print_format', 'json',
+                          '-show_format', '-show_streams', '-'), capture_output=True, input=input_stream)
     format_info = json_loads(proc.stdout)
 
     if 'format' not in format_info or 'streams' not in format_info or format_info['format']['format_name'] not in ('ogg', 'oga', 'opus', 'mp3', 'flac', 'wav'):
@@ -43,7 +44,8 @@ def _probe_audio(input_stream: bytes) -> Tuple[str, int]:
             sample_rate = int(stream['sample_rate'])
             break
     else:
-        raise HTTPException(status_code=400, detail='Could not find stream in input file')
+        raise HTTPException(
+            status_code=400, detail='Could not find stream in input file')
 
     return format, sample_rate
 
@@ -70,8 +72,9 @@ def _construct_filters(tempo_scaler: float, orig_sample_rate: int, new_sample_ra
             if (r := tempo_scaler ** (1/n)) <= t:
                 break
         else:
-            raise HTTPException(status_code=400, detail='Tempo scale factor is too large.')
-        
+            raise HTTPException(
+                status_code=400, detail='Tempo scale factor is too large.')
+
         for _ in range(n):
             filters.append(f'atempo={r:.4f}')
     else:
@@ -85,14 +88,15 @@ def _construct_filters(tempo_scaler: float, orig_sample_rate: int, new_sample_ra
 __ffmpeg_formats = {
     'm4a': ('mp4', 'aac'),
     'ogg': ('ogg', 'libvorbis')
-}    
+}
+
 
 def convert_audio(input_stream: bytes, output_format: str = 'm4a', tempo_scaler: float = DEFAULT_TEMPO, pitch_scaler: float = DEFAULT_PITCH) -> bytes:
     '''
     Perform the conversion and returns the result.
 
     This routine blocks and shouldn't be called on the main thread.
-    
+
     :param input_stream: Audio stream to convert
     :param output_format: One of m4a or ogg
     :param tempo_scaler: Percent by which to change the tempo as a fraction of 1
@@ -105,20 +109,24 @@ def convert_audio(input_stream: bytes, output_format: str = 'm4a', tempo_scaler:
     try:
         output_format, output_codec = __ffmpeg_formats[output_format]
     except KeyError:
-        raise HTTPException(status_code=400, detail='Unsupported output format')
+        raise HTTPException(
+            status_code=400, detail='Unsupported output format')
 
     # We can't just read stdout because the mp4 muxer doesn't support non-seekable outputs
     with TemporaryDirectory() as td:
         tfp = os.path.join(td, 'output')
         # Perform the conversion! Wow!
-        proc = subprocess.run((FFMPEG_EXEC, '-i', 'pipe:', '-f', input_format, '-c:a', output_codec, '-vn', '-f', output_format, '-af', filters, tfp), input=input_stream, capture_output=True)
+        proc = subprocess.run((FFMPEG_EXEC, '-i', 'pipe:', '-f', input_format, '-c:a', output_codec,
+                              '-vn', '-f', output_format, '-af', filters, tfp), input=input_stream, capture_output=True)
 
         if proc.returncode != 0:
             print(proc.stderr)
-            raise HTTPException(status_code=500, detail='Audio conversion failed')
+            raise HTTPException(
+                status_code=500, detail='Audio conversion failed')
 
         if os.stat(tfp).st_size > MAX_ARTIFACT_SIZE:
-            raise HTTPException(status_code=400, detail='Resulting file exceeded the size limit.')
+            raise HTTPException(
+                status_code=400, detail='Resulting file exceeded the size limit.')
 
         with open(tfp, 'rb') as fp:
             return fp.read()

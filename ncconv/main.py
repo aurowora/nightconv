@@ -12,7 +12,8 @@
 
 from threading import Thread
 from queue import Queue
-import shutil, sys
+import shutil
+import sys
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
@@ -33,12 +34,14 @@ from ncconv.routes.media import media_router
 from ncconv.routes.convert import convert_router
 
 
-api = FastAPI(docs_url = None, redoc_url = None)
+api = FastAPI(docs_url=None, redoc_url=None)
 
 # Add the desired middleware
 api.add_middleware(TrustedHostMiddleware, allowed_hosts=HOSTS)
-api.add_middleware(ProxyHeadersMiddleware, trusted_hosts=TRUSTED_PROXIES) # This is important so that our rate limiting hits actual client IP addresses
-api.add_middleware(CORSMiddleware, allow_origins=CORS_HOSTS, allow_methods=['GET', 'POST'], allow_headers=['Content-Length'], max_age=3600, expose_headers=['Retry-After'])
+# This is important so that our rate limiting hits actual client IP addresses
+api.add_middleware(ProxyHeadersMiddleware, trusted_hosts=TRUSTED_PROXIES)
+api.add_middleware(CORSMiddleware, allow_origins=CORS_HOSTS, allow_methods=[
+                   'GET', 'POST'], allow_headers=['Content-Length'], max_age=3600, expose_headers=['Retry-After'])
 api.add_middleware(BrotliMiddleware, gzip_fallback=True, minimum_size=400)
 
 # Add subrouters
@@ -47,11 +50,12 @@ api.include_router(convert_router)
 
 
 # Serve the web app
-sf = BrotliMiddleware(StaticFiles(directory='public', html=True), gzip_fallback=True)
+sf = BrotliMiddleware(StaticFiles(directory='public',
+                      html=True), gzip_fallback=True)
 
 # Configure a wrapper FastAPI app
 
-app = FastAPI(docs_url = None, redoc_url = None)
+app = FastAPI(docs_url=None, redoc_url=None)
 app.mount('/api', api)
 app.mount('/', sf, name='static')
 
@@ -64,10 +68,11 @@ if SENTRY_DSN:
             if isinstance(ty, HTTPException):
                 if 400 <= val.status_code < 500:  # ignore anything caused by the user
                     return None
-        
+
         return event
 
-    sentry_init(dsn=SENTRY_DSN, release=VERSION, before_send=ignore_user_errors)
+    sentry_init(dsn=SENTRY_DSN, release=VERSION,
+                before_send=ignore_user_errors)
 
     app.add_middleware(SentryAsgiMiddleware)
 
@@ -77,7 +82,8 @@ if SENTRY_DSN:
 async def initialize():
     # Connect to the database
     api.state.db = AsyncIOMotorClient(MONGO_URI)[MONGO_DB]
-    api.state.file_store = AsyncIOMotorGridFSBucket(api.state.db, bucket_name="music")
+    api.state.file_store = AsyncIOMotorGridFSBucket(
+        api.state.db, bucket_name="music")
 
     # Setup indexes
 
@@ -100,7 +106,7 @@ if __name__ == '__main__':
     if not shutil.which(FFMPEG_EXEC) or not shutil.which(FFPROBE_EXEC):
         print('FATAL: ffmpeg or ffprobe was not found in PATH. Install them and try again.')
         sys.exit(1)
-    
+
     # Create threads for ffmpeg
     # sync db handle
     db = MongoClient(MONGO_URI)[MONGO_DB]
@@ -108,11 +114,13 @@ if __name__ == '__main__':
     q = Queue()
     ffthread = Thread(target=fftask, args=(q, db), name='fftask-0').start()
 
-    reaper_thread = Thread(target=reaper_task, args=(q, db), name='reaper-task').start()
+    reaper_thread = Thread(target=reaper_task, args=(
+        q, db), name='reaper-task').start()
 
-    run('ncconv.main:app', host=BIND_HTTP_IP, port=BIND_HTTP_PORT, log_level='info', workers=HTTP_WORKERS)
-    
+    run('ncconv.main:app', host=BIND_HTTP_IP, port=BIND_HTTP_PORT,
+        log_level='info', workers=HTTP_WORKERS)
+
     for x in range(2):
         q.put(1)  # Tell our threads to terminate
-    
+
     print('Waiting for all threads to terminate.')

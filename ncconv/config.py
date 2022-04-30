@@ -25,11 +25,14 @@ MONGO_DB = config('MONGO_DB', default='ncconv')
 FFMPEG_EXEC = config('FFMPEG_BIN', default='ffmpeg')
 FFPROBE_EXEC = config('FFPROBE_BIN', default='ffprobe')
 # Allowed hosts
-HOSTS = config('TRUSTED_HOSTS', cast=CommaSeparatedStrings, default=CommaSeparatedStrings('127.0.0.1, localhost'))
+HOSTS = config('TRUSTED_HOSTS', cast=CommaSeparatedStrings,
+               default=CommaSeparatedStrings('127.0.0.1, localhost'))
 # Allowed hosts for CORS
-CORS_HOSTS = config('TRUSTED_CORS_HOSTS', cast=CommaSeparatedStrings, default=CommaSeparatedStrings('http://127.0.0.1:8080, http://localhost:8080'))
+CORS_HOSTS = config('TRUSTED_CORS_HOSTS', cast=CommaSeparatedStrings,
+                    default=CommaSeparatedStrings('http://127.0.0.1:8080, http://localhost:8080'))
 # Used for determining the real ip address of the client
-TRUSTED_PROXIES = config('TRUSTED_PROXIES', cast=CommaSeparatedStrings, default=CommaSeparatedStrings('127.0.0.1'))
+TRUSTED_PROXIES = config('TRUSTED_PROXIES', cast=CommaSeparatedStrings,
+                         default=CommaSeparatedStrings('127.0.0.1'))
 # IP and port to bind
 BIND_HTTP_IP = config('HTTP_IP', default='127.0.0.1')
 BIND_HTTP_PORT = config('HTTP_PORT', cast=int, default=8080)
@@ -40,7 +43,8 @@ FFMPEG_WORKERS = config('FFMPEG_WORKERS', cast=int, default=cpu_count())
 # If using sentry, specify DSN here
 SENTRY_DSN = config('SENTRY_DSN', default=None)
 # refuse to store files larger than this
-MAX_ARTIFACT_SIZE = config('MAX_ARTIFACT_SIZE', cast=int, default=(20 * (1024 ** 2)))
+MAX_ARTIFACT_SIZE = config(
+    'MAX_ARTIFACT_SIZE', cast=int, default=(20 * (1024 ** 2)))
 
 # Not a configuration option, but it lives here because I said so :)
 VERSION = '0.1-ALPHA'
