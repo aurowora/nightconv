@@ -3,6 +3,9 @@
     import { convert_audio } from '../api';
     import AudioPlayer from './AudioPlayer/AudioPlayer.svelte';
 
+    import { createEventDispatcher } from "svelte";
+    const ev = createEventDispatcher();
+
     let converting = false;
     let convert_status = '';
     let errorMessage: string | undefined = undefined;
@@ -10,6 +13,7 @@
     let tempoScaler = DEFAULT_TEMPO_SCALER;
     let pitchScaler = DEFAULT_PITCH_SCALER;
     let file: FileList;
+    let file_entry: HTMLInputElement;
 
     let lastConverted: string | undefined = undefined;
 
@@ -36,6 +40,10 @@
 
         convert_audio(file[0], desiredFormat, pitchScaler, tempoScaler, on_status).then(result => {
             lastConverted = result;
+            file = undefined;
+            file_entry.value = '';
+
+            ev('conversion-finished');
         }).catch(err => {
             errorMessage = err;
         }).finally(() => {
@@ -58,7 +66,7 @@
 
 
     <form on:submit|preventDefault="{convert}">
-        <input bind:files={file} type="file" name="file" accept="audio/ogg,audio/mpeg,audio/wav,audio/opus,audio/x-flac" disabled='{converting}'>
+        <input bind:this="{file_entry}" bind:files={file} type="file" name="file" accept="audio/ogg,audio/mpeg,audio/wav,audio/opus,audio/x-flac" disabled='{converting}'>
             
         <div class="grid">
             <label for="tempo-scaler">

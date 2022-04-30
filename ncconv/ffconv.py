@@ -8,7 +8,7 @@ import os
 from fastapi import HTTPException
 from orjson import loads as json_loads
 
-from ncconv.config import FFMPEG_EXEC, FFPROBE_EXEC, DEFAULT_PITCH, DEFAULT_TEMPO
+from ncconv.config import FFMPEG_EXEC, FFPROBE_EXEC, DEFAULT_PITCH, DEFAULT_TEMPO, MAX_ARTIFACT_SIZE
 
 
 def _probe_audio(input_stream: bytes) -> Tuple[str, int]:
@@ -107,6 +107,9 @@ def convert_audio(input_stream: bytes, output_format: str = 'm4a', tempo_scaler:
         if proc.returncode != 0:
             print(proc.stderr)
             raise HTTPException(status_code=500, detail='Audio conversion failed')
+
+        if os.stat(tfp).st_size > MAX_ARTIFACT_SIZE:
+            raise HTTPException(status_code=400, detail='Resulting file exceeded the size limit.')
 
         with open(tfp, 'rb') as fp:
             return fp.read()

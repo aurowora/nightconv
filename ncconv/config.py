@@ -1,8 +1,10 @@
 from starlette.config import Config
 from starlette.datastructures import CommaSeparatedStrings
 from multiprocessing import cpu_count
+import os
 
-config = Config('.env')
+config_file = '.env' if 'NCCONV_CONF' not in os.environ else os.environ['NCCONV_CONF']
+config = Config(config_file)
 
 # Connection URI for MongoDB
 MONGO_URI = config('MONGO_URI')
@@ -26,6 +28,8 @@ HTTP_WORKERS = config('HTTP_WORKERS', cast=int, default=cpu_count())
 FFMPEG_WORKERS = config('FFMPEG_WORKERS', cast=int, default=cpu_count())
 # If using sentry, specify DSN here
 SENTRY_DSN = config('SENTRY_DSN', default=None)
+# refuse to store files larger than this
+MAX_ARTIFACT_SIZE = config('MAX_ARTIFACT_SIZE', cast=int, default=(20 * (1024 ** 2)))
 
 # Not a configuration option, but it lives here because I said so :)
 VERSION = '0.1-ALPHA'

@@ -2,6 +2,13 @@
 import { get_recent_files } from "../api";
 import AudioPlayer from "./AudioPlayer/AudioPlayer.svelte";
 
+let fetchData = get_recent_files();
+
+export function reload() {
+    /* This causes Svelte to re-run the await block below */
+    fetchData = get_recent_files();
+}
+
 </script>
 
 
@@ -10,7 +17,7 @@ import AudioPlayer from "./AudioPlayer/AudioPlayer.svelte";
         <h4>Recent Conversions</h4>
     </header>
     <div class="players">
-        {#await get_recent_files()}
+        {#await fetchData}
             <span aria-busy="true">Loading recently converted files...</span>
         {:then result}
             {#if result.length === 0}

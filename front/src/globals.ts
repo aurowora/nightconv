@@ -23,3 +23,10 @@ export const MAX_FILE_SIZE = 20 * (1024 ** 2);
     Formats allowed as conversion targets. ogg (VORBIS) and M4A (AAC)
 */
 export const ALLOWED_FORMATS = ['ogg', 'm4a'];
+
+/*
+    Buttons to display in the UI
+*/
+export const BUTTONS = [
+    {'src': '/assets/github.svg', 'recolor': true, 'target': 'https://github.com/aurowora/nightconv', 'alt': 'GitHub'}
+]
