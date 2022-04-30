@@ -26,19 +26,15 @@ $primary-hue: 338;
 
 // Content
 @import "@picocss/pico/scss/content/typography"; // a, headings, p, ul, blockquote, ...
-//@import "@picocss/pico/scss/content/embedded"; // audio, canvas, iframe, img, svg, video
 @import "@picocss/pico/scss/content/button"; // button, a[role=button], type=button, type=submit ...
 @import "@picocss/pico/scss/content/form"; // input, select, textarea, label, fieldset, legend
 @import "@picocss/pico/scss/content/form-alt-input-types"; // type=color, type=date, type=file, type=search, ...
-//@import "@picocss/pico/scss/content/table"; // table, tr, td, ...
 
-
+// Components
+@import "@picocss/pico/scss/components/modal";
 @import "@picocss/pico/scss/components/card"; // article
-//@import "@picocss/pico/scss/components/modal"; // dialog
-//@import "@picocss/pico/scss/components/progress"; // progress
-@import "@picocss/pico/scss/utilities/loading"; // aria-busy=true
-
 
 // Utilities
 @import "@picocss/pico/scss/utilities/accessibility"; // -ms-touch-action, aria-*
 @import "@picocss/pico/scss/utilities/reduce-motion"; // prefers-reduced-motion
+@import "@picocss/pico/scss/utilities/loading"; // aria-busy=true

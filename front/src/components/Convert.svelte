@@ -1,6 +1,5 @@
 <script lang="ts">
     import { DEFAULT_PITCH_SCALER, DEFAULT_TEMPO_SCALER, MAX_FILE_SIZE, ALLOWED_FORMATS } from '../globals';
-    import filesize from 'filesize';
     import { convert_audio } from '../api';
     import AudioPlayer from './AudioPlayer/AudioPlayer.svelte';
 
@@ -51,7 +50,6 @@
 </script>
 
 
-<article>
     {#if errorMessage !== undefined}
         <div class="error">
             <p>{errorMessage}</p>
@@ -60,10 +58,7 @@
 
 
     <form on:submit|preventDefault="{convert}">
-        <label for="file">
-            Convert mp3, ogg, flac, and wav files up to {filesize(MAX_FILE_SIZE, {base: 2})}.
-            <input bind:files={file} type="file" name="file" accept="audio/ogg,audio/mpeg,audio/wav,audio/opus,audio/x-flac" disabled='{converting}'>
-        </label>
+        <input bind:files={file} type="file" name="file" accept="audio/ogg,audio/mpeg,audio/wav,audio/opus,audio/x-flac" disabled='{converting}'>
             
         <div class="grid">
             <label for="tempo-scaler">
@@ -92,11 +87,11 @@
     
     {#if lastConverted}
         <h5 id="resultheader">Conversion Result</h5>
+        <small>Converted files are only retained for 24 hours. Download files that you wish to keep.</small>
         <div class="player-wrapper">
             <AudioPlayer display={lastConverted}></AudioPlayer>
         </div>
     {/if}
-</article>
 
 <style>
 #convert_button {
@@ -117,10 +112,6 @@
 p {
     margin: 0;
     color: white;
-}
-
-article {
-    padding-bottom: 20px;
 }
 
 #resultheader {

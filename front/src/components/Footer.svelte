@@ -1,5 +1,5 @@
 <small class="footer">
-    Nightconv &copy; 2022 Aurora 
+    Nightconv &copy; 2022 Aurora
 </small>
 
 <style>
