@@ -6,3 +6,5 @@ __pycache__
 front/node_modules/
 front/public/build/
 front/stats.json
+
+/testfiles/

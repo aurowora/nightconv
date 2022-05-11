@@ -15,7 +15,6 @@ from os import path
 from queue import Empty, Queue
 import re
 from threading import Thread
-from time import sleep
 from fastapi import HTTPException
 
 from pymongo import MongoClient
